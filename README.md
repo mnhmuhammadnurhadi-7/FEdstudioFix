@@ -1,16 +1,6 @@
-# React + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+# dstudioFix
+> ⚠️ **MOHON IZIN PENGUMUMAN KONFIRMASI & KLARIFIKASI TUGAS PBL**
+> Sehubungan dengan adanya kendala teknis (laptop rusak) sejak **23 Mei 2026**, proses pengerjaan proyek PBL ini terpaksa dialihkan menggunakan laptop rekan kelompok saya.
+> * **Akun GitHub Rekan yang Digunakan**: @mnhmuhammadnurhadi-7
+> 
+> *Catatan: Proyek pada repositori baru ini sepenuhnya merupakan kelanjutan dari tugas PBL saya yang sudah berjalan selama 2 bulan terakhir.*
