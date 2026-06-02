@@ -6,16 +6,26 @@ const StatusProgress = ({ status }) => {
     { id: 'PENDING', label: 'Diterima (Pending)', icon: 'solar:square-share-line-bold-duotone', desc: 'Pesanan masuk & antre verifikasi' },
     { id: 'PROSES', label: 'Diproses', icon: 'solar:pen-new-square-bold-duotone', desc: 'Editor sedang mengedit foto Anda' },
     { id: 'SELESAI', label: 'Selesai / Revisi', icon: 'solar:file-check-bold-duotone', desc: 'Hasil edit siap diunduh & ditinjau' },
-    { id: 'DIAMBIL', label: 'Diambil', icon: 'solar:bookmark-check-bold-duotone', desc: 'Berkas selesai & berhasil diunduh' },
   ];
 
   const getStepNumber = (statusName) => {
     switch (statusName?.toUpperCase()) {
-      case 'PENDING': return 1;
-      case 'PROSES': return 2;
-      case 'SELESAI': return 3;
-      case 'DIAMBIL': return 4;
-      default: return 1;
+      case 'PENDING':
+      case 'TERKIRIM':
+        return 1;
+      case 'PROSES':
+      case 'DIPROSES':
+      case 'VALIDASI':
+      case 'DIVALIDASI':
+      case 'VERIFIKASI':
+        return 2;
+      case 'SELESAI':
+      case 'REVISI':
+      case 'DIAMBIL':
+      case 'SELESAI/REVISI':
+        return 3;
+      default:
+        return 1;
     }
   };
 

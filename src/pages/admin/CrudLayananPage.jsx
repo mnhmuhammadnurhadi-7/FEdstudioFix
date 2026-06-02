@@ -22,9 +22,6 @@ const CrudLayananPage = () => {
     name: '',
     price: '',
     description: '',
-    bgSpec: '',
-    duration: '1-24 Jam',
-    slug: '',
   });
 
   const [deleteId, setDeleteId] = useState(null);
@@ -33,7 +30,18 @@ const CrudLayananPage = () => {
     setIsLoading(true);
     try {
       const response = await axiosInstance.get('/admin/services');
-      setServices(response.data);
+      // Map backend fields to frontend expected format
+      const mappedServices = response.data.services.map(service => ({
+        id: service.id_layanan,
+        name: service.nama_layanan,
+        price: service.harga,
+        description: service.deskripsi || '',
+        bgSpec: '', // Backend doesn't have this field
+        duration: '1-24 Jam', // Backend doesn't have this field
+        slug: '', // Backend doesn't have this field
+        is_active: service.is_active,
+      }));
+      setServices(mappedServices);
     } catch (error) {
       console.warn('API Services fetch failed, loading localStorage fallback: ', error.message);
       
@@ -58,9 +66,6 @@ const CrudLayananPage = () => {
       name: '',
       price: '',
       description: '',
-      bgSpec: '',
-      duration: '1-24 Jam',
-      slug: '',
     });
     setIsModalOpen(true);
   };
@@ -71,9 +76,6 @@ const CrudLayananPage = () => {
       name: service.name,
       price: service.price.toString(),
       description: service.description,
-      bgSpec: service.bgSpec,
-      duration: service.duration,
-      slug: service.slug,
     });
     setIsModalOpen(true);
   };
@@ -87,13 +89,12 @@ const CrudLayananPage = () => {
     setIsLoading(true);
 
     const priceNum = parseInt(formData.price.replace(/\D/g, '')) || 0;
+    // Map frontend fields to backend API format
     const payload = {
-      name: formData.name,
-      price: priceNum,
-      description: formData.description,
-      bgSpec: formData.bgSpec,
-      duration: formData.duration,
-      slug: formData.slug || formData.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
+      nama_layanan: formData.name,
+      harga: priceNum,
+      deskripsi: formData.description,
+      is_active: true,
     };
 
     try {
@@ -119,7 +120,7 @@ const CrudLayananPage = () => {
         if (index !== -1) {
           localServices[index] = {
             ...localServices[index],
-            ...payload,
+            ...formData,
             price: priceNum,
           };
           localStorage.setItem('local_services', JSON.stringify(localServices));
@@ -129,7 +130,8 @@ const CrudLayananPage = () => {
         // CREATE fallback
         const newService = {
           id: `service-local-${Math.floor(Math.random() * 10000)}`,
-          ...payload,
+          ...formData,
+          price: priceNum,
           specs: ['Pemberian aksesoris pakaian digital rapi', 'Penyesuaian latar belakang solid', 'Retouching wajah alami'],
           sampleBefore: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300',
           sampleAfter: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300',
@@ -225,10 +227,6 @@ const CrudLayananPage = () => {
                   <p className="text-xs text-slate-500 leading-relaxed mb-4">
                     {service.description}
                   </p>
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider space-y-1">
-                    <div>Latar Belakang: <span className="text-slate-655 dark:text-slate-350">{service.bgSpec}</span></div>
-                    <div>Pengerjaan: <span className="text-slate-655 dark:text-slate-350">{service.duration}</span></div>
-                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 mt-6 pt-4 border-t border-slate-100 dark:border-zinc-800/60">
@@ -282,37 +280,13 @@ const CrudLayananPage = () => {
                 required
               />
 
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Harga Layanan (Rp)"
-                  type="text"
-                  placeholder="Contoh: 15000"
-                  value={formData.price}
-                  onChange={(e) => handleFieldChange('price', e.target.value.replace(/\D/g, ''))}
-                  required
-                />
-                <Input
-                  label="Durasi Pengerjaan"
-                  placeholder="Contoh: 1-24 Jam"
-                  value={formData.duration}
-                  onChange={(e) => handleFieldChange('duration', e.target.value)}
-                  required
-                />
-              </div>
-
               <Input
-                label="Spesifikasi Background Warna"
-                placeholder="Contoh: Latar Merah Solid / Biru Kampus"
-                value={formData.bgSpec}
-                onChange={(e) => handleFieldChange('bgSpec', e.target.value)}
+                label="Harga Layanan (Rp)"
+                type="text"
+                placeholder="Contoh: 15000"
+                value={formData.price}
+                onChange={(e) => handleFieldChange('price', e.target.value.replace(/\D/g, ''))}
                 required
-              />
-
-              <Input
-                label="URL Slug (Optional)"
-                placeholder="Contoh: ktm-almamater"
-                value={formData.slug}
-                onChange={(e) => handleFieldChange('slug', e.target.value.toLowerCase().replace(/ /g, '-'))}
               />
 
               <Textarea

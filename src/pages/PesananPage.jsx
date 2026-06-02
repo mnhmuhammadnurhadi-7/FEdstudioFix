@@ -10,6 +10,11 @@ import Toast from '../components/ui/Toast';
 import { fallbackServices } from '../data/services';
 import { generateTicketCode } from '../lib/helpers';
 import axiosInstance from '../lib/axios';
+import emailjs from '@emailjs/browser';
+
+const EMAILJS_SERVICE = 'service_ywl4yys';
+const EMAILJS_TEMPLATE = 'template_w2k2iba';
+const EMAILJS_PUBLIC_KEY = 'rHQIx6xCzj5EtCU8c';
 
 const PesananPage = () => {
   const [searchParams] = useSearchParams();
@@ -17,6 +22,7 @@ const PesananPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [ticketCode, setTicketCode] = useState('');
   const [toastMessage, setToastMessage] = useState(null);
+  const [services, setServices] = useState(fallbackServices);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -31,16 +37,64 @@ const PesananPage = () => {
 
   const [errors, setErrors] = useState({});
 
+  const sendTicketEmail = async (ticketCode) => {
+    const selectedServiceForEmail = services.find((s) => String(s.id) === String(formData.service_id)) || fallbackServices.find((s) => String(s.id) === String(formData.service_id));
+    return emailjs.send(
+      EMAILJS_SERVICE,
+      EMAILJS_TEMPLATE,
+      {
+        to_email: formData.email,
+        reply_to: formData.email,
+        customer_email: formData.email,
+        customer_name: formData.name,
+        ticket_code: ticketCode,
+        whatsapp_number: formData.whatsapp,
+        service_name: selectedServiceForEmail?.name || '',
+        photo_link: formData.photo_link,
+        notes: formData.notes || '',
+        order_summary: `Layanan: ${selectedServiceForEmail?.name || 'Pas Foto Custom'}\nNomor WA: ${formData.whatsapp}\nLink foto: ${formData.photo_link}`,
+      },
+      EMAILJS_PUBLIC_KEY
+    );
+  };
+
+  // Fetch services from backend API
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const response = await axiosInstance.get('/services');
+        // Map backend fields to frontend expected format
+        const mappedServices = response.data.map(service => ({
+          id: service.id_layanan,
+          name: service.nama_layanan,
+          price: service.harga,
+          description: service.deskripsi || '',
+          bgSpec: 'Latar Belakang Solid',
+          duration: '1-24 Jam',
+          slug: service.nama_layanan.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
+          specs: ['Pemberian aksesoris pakaian digital rapi', 'Penyesuaian latar belakang solid', 'Retouching wajah alami'],
+          sampleBefore: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300',
+          sampleAfter: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300',
+        }));
+        setServices(mappedServices);
+      } catch (error) {
+        console.warn('API Services fetch failed, using fallback: ', error.message);
+        // Keep fallback services if API fails
+      }
+    };
+    fetchServices();
+  }, []);
+
   // Pre-select service from URL param if available
   useEffect(() => {
     const serviceId = searchParams.get('serviceId');
     if (serviceId) {
-      const match = fallbackServices.find((s) => s.id === serviceId);
+      const match = services.find((s) => s.id === serviceId);
       if (match) {
         setFormData((prev) => ({ ...prev, service_id: match.id }));
       }
     }
-  }, [searchParams]);
+  }, [searchParams, services]);
 
   const handleFieldChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -128,49 +182,78 @@ const PesananPage = () => {
   const handleSubmitOrder = async () => {
     setIsLoading(true);
 
-    const generatedTicket = generateTicketCode(formData.whatsapp);
-    setTicketCode(generatedTicket);
-
     const payload = {
-      ticket_code: generatedTicket,
-      customer_name: formData.name,
-      email: formData.email,
-      whatsapp_number: formData.whatsapp,
+      name: formData.name,
+      phone: formData.whatsapp,
       service_id: formData.service_id,
-      service_name: fallbackServices.find(s => s.id === formData.service_id)?.name || 'Pas Foto Custom',
-      raw_photo_link: formData.photo_link,
       notes: formData.notes,
-      status: 'PENDING_PAYMENT',
+      photo_link: formData.photo_link,
     };
 
     try {
-      await axiosInstance.post('/orders', payload);
-      setToastMessage({
-        type: 'success',
-        text: 'Pesanan berhasil terdaftar di server backend.',
-      });
+      const response = await axiosInstance.post('/order/step-3', payload);
+      const ticketId = response.data.ticket_id;
+      setTicketCode(ticketId);
+
+      try {
+        await sendTicketEmail(ticketId);
+        setToastMessage({
+          type: 'success',
+          text: 'Pesanan berhasil terdaftar dan email tiket terkirim.',
+        });
+      } catch (emailError) {
+        console.warn('EmailJS send failed: ', emailError.message);
+        setToastMessage({
+          type: 'warning',
+          text: 'Pesanan berhasil, tetapi email tiket gagal dikirim.',
+        });
+      }
+
       setStep(4);
     } catch (error) {
       console.warn('API POST failed, running offline fallback mode: ', error.message);
+      const generatedTicket = generateTicketCode(formData.whatsapp);
+      setTicketCode(generatedTicket);
+      
       const currentOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
+      const selectedService = services.find(s => s.id === formData.service_id);
       currentOrders.push({
         id: Math.floor(Math.random() * 10000),
-        ...payload,
+        ticket_code: generatedTicket,
+        customer_name: formData.name,
+        email: formData.email,
+        whatsapp_number: formData.whatsapp,
+        service_id: formData.service_id,
+        service_name: selectedService?.name || 'Pas Foto Custom',
+        raw_photo_link: formData.photo_link,
+        notes: formData.notes,
+        total_bayar: selectedService?.price || 0,
+        status: 'PENDING_PAYMENT',
         created_at: new Date().toISOString(),
       });
       localStorage.setItem('local_orders', JSON.stringify(currentOrders));
 
-      setToastMessage({
-        type: 'info',
-        text: 'Server offline. Pesanan disimpan di penyimpanan lokal (Fallback Mode).',
-      });
+      try {
+        await sendTicketEmail(generatedTicket);
+        setToastMessage({
+          type: 'success',
+          text: 'Pesanan berhasil disimpan lokal dan email tiket terkirim.',
+        });
+      } catch (emailError) {
+        console.warn('EmailJS send failed in fallback mode: ', emailError.message);
+        setToastMessage({
+          type: 'warning',
+          text: 'Pesanan disimpan lokal, tetapi email tiket gagal dikirim.',
+        });
+      }
+
       setStep(4);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const selectedService = fallbackServices.find((s) => s.id === formData.service_id);
+  const selectedService = services.find((s) => String(s.id) === String(formData.service_id)) || fallbackServices.find((s) => String(s.id) === String(formData.service_id));
 
   return (
     <div className="min-h-screen bg-[#FAFAFC]">
@@ -189,7 +272,7 @@ const PesananPage = () => {
         <StepDataFoto
           formData={formData}
           errors={errors}
-          services={fallbackServices}
+          services={services}
           onChange={handleFieldChange}
           onNext={handleNextStep}
         />

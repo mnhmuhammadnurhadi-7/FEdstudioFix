@@ -29,13 +29,13 @@ const BerandaPage = () => {
       title: 'Pilihan Lengkap',
       desc: 'Tersedia berbagai pilihan almamater kampus nasional, kemeja putih jas, dan warna background sesuai regulasi resmi.',
       badge: 'Banyak Variasi',
-      icon: 'solar:slider-minimal-linear',
+      icon: 'bi:grid-1x2-fill',
     },
   ];
 
   const team = [
     {
-      name: 'Muhammad Nur Hadi',
+      name: 'Adittia Dwi Kurniawan',
       role: 'Creative Director',
       avatar: tim1,
     },
@@ -45,7 +45,7 @@ const BerandaPage = () => {
       avatar: tim2,
     },
     {
-      name: 'Adittia Dwi Kurniawan',
+      name: 'Muhammad Nur Hadi',
       role: 'Studio Manager',
       avatar: tim3,
     },
@@ -74,13 +74,13 @@ const BerandaPage = () => {
       <section className="bg-white py-24">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 text-xs font-semibold bg-[#2101FC]/8 text-[#2101FC] rounded-full border border-[#2101FC]/15 mb-4">
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 text-xs font-semibold">
               Kenapa Memilih Kami?
             </span>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-[#0D0D1A] tracking-tight">
+            <h1 className="text-3xl md:text-4xl font-semibold text-[#0D0D1A] tracking-tight">
               Solusi Edit Pas Foto Formal <br className="hidden sm:inline" />
-              Yang Terpercaya &amp; Profesional
-            </h2>
+              Tanpa Ke Studio
+            </h1>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -109,13 +109,12 @@ const BerandaPage = () => {
 
       {/* 4. Portfolio Marquee */}
       <PortfolioMarquee />
-
       {/* 5. Professional Team Section */}
-      <section className="bg-[#FAFAFC] py-24 border-t border-slate-200/50">
+      <section className="bg-white py-24">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 text-xs font-semibold bg-[#2101FC]/8 text-[#2101FC] rounded-full border border-[#2101FC]/15 mb-4">
-              Tim Editor Kami
+            <span className="inline-flex items-center gap-2 px-3.5 py-1 text-xs font-semibold">
+              Our Team
             </span>
             <h2 className="text-3xl md:text-4xl font-extrabold text-[#0D0D1A] tracking-tight">
               Dikerjakan Oleh Team Profesional

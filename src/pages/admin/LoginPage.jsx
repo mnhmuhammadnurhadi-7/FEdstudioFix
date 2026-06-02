@@ -2,16 +2,17 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import Input from '../../components/ui/Input';
-import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
 import Toast from '../../components/ui/Toast';
+import axiosInstance from '../../lib/axios';
+import { useAuth } from '../../context/AuthContext';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
-    role: 'ADMIN', // Default role select for easy mock testing
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -21,31 +22,50 @@ const LoginPage = () => {
     setFormData((prev) => ({ ...prev, [field]: val }));
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simple authentication mock check
-    setTimeout(() => {
-      setIsLoading(false);
-      
-      // Store credentials
-      localStorage.setItem('admin_token', `mock-jwt-token-key-${Math.random().toString(36).substring(2)}`);
-      localStorage.setItem('admin_role', formData.role);
-      localStorage.setItem('admin_name', formData.role === 'SUPER_ADMIN' ? 'Super Administrator' : 'Editor Admin');
-      
-      setToastMessage({
-        type: 'success',
-        text: `Login sukses sebagai ${formData.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'}!`,
+    try {
+      const response = await axiosInstance.post('/admin/login', {
+        username: formData.username,
+        password: formData.password,
       });
 
-      // Redirect to dashboard after a short delay
-      setTimeout(() => {
-        navigate('/admin/dashboard');
-        // Force header update
-        window.location.reload();
-      }, 1000);
-    }, 1200);
+      if (response.data.success) {
+        const admin = response.data.admin;
+        
+        // Use AuthContext login method
+        login({
+          id: admin.id,
+          name: admin.name,
+          role: admin.role,
+        });
+        
+        setToastMessage({
+          type: 'success',
+          text: `Login sukses sebagai ${admin.role === 'superadmin' ? 'Super Admin' : 'Admin'}!`,
+        });
+
+        // Redirect to dashboard after a short delay
+        setTimeout(() => {
+          navigate('/admin/dashboard');
+        }, 1000);
+      } else {
+        setToastMessage({
+          type: 'error',
+          text: response.data.message || 'Login gagal',
+        });
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setToastMessage({
+        type: 'error',
+        text: error.response?.data?.message || 'Username atau password salah',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -85,17 +105,6 @@ const LoginPage = () => {
               required
             />
 
-            <Select
-              label="Role Otoritas Akses"
-              options={[
-                { value: 'ADMIN', label: 'Admin (Akses Dashboard & Verifikasi)' },
-                { value: 'SUPER_ADMIN', label: 'Super Admin (Akses Penuh + CRUD Layanan)' }
-              ]}
-              value={formData.role}
-              onChange={(e) => handleFieldChange('role', e.target.value)}
-              required
-            />
-
             <div className="flex items-center justify-between text-xs font-semibold">
               <div className="flex items-center">
                 <input
@@ -126,12 +135,6 @@ const LoginPage = () => {
               </Button>
             </div>
           </form>
-
-          {/* Quick instructions for reviewer */}
-          <div className="mt-6 pt-5 border-t border-slate-100 dark:border-zinc-800 text-[10px] font-medium text-slate-400">
-            <span className="font-bold text-slate-700 dark:text-slate-350 block mb-1">💡 Tips Reviewer:</span>
-            Pilih role <span className="font-bold text-slate-800">SUPER_ADMIN</span> untuk melihat CRUD layanan, atau <span className="font-bold text-slate-800">ADMIN</span> untuk mengetes proteksi halaman 403. Gunakan sembarang password.
-          </div>
 
         </div>
       </div>

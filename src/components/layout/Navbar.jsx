@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import Button from '../ui/Button';
+import logoDstudio from '../../assets/logo/logo_dstudio.PNG';
 
 const Navbar = () => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
-  const isAdminLoggedIn = !!localStorage.getItem('admin_token');
+  const navRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,133 +26,184 @@ const Navbar = () => {
   // Close mobile drawer on route change
   useEffect(() => {
     setIsOpen(false);
+    setIsExpanded(false);
   }, [location]);
 
-  const navLinks = [
-    { name: 'Beranda', path: '/' },
-    { name: 'Layanan', path: '/layanan' },
-    { name: 'Cek Status', path: '/cek-status' },
+  const navItems = [
+    {
+      label: 'Jelajahi',
+      bgColor: '#3b82f6',
+      textColor: '#fff',
+      links: [
+        { label: 'Beranda', path: '/', ariaLabel: 'Beranda' },
+        { label: 'Layanan', path: '/layanan', ariaLabel: 'Layanan Kami' },
+      ],
+    },
+    {
+      label: 'Lainnya',
+      bgColor: '#1e293b',
+      textColor: '#fff',
+      links: [
+        { label: 'Cek Status', path: '/cek-status', ariaLabel: 'Cek Status Pesanan' },
+        { label: 'Hubungi Kami', path: '/hubungi', ariaLabel: 'Hubungi Kami' },
+      ],
+    },
   ];
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-      scrolled 
-        ? 'py-3 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md border-b border-slate-200/50 dark:border-zinc-800/50 shadow-sm' 
-        : 'py-5 bg-transparent'
-    }`}>
-      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 group focus:outline-none">
-          <div className="w-9 h-9 rounded-xl bg-primary-500 flex items-center justify-center text-white font-extrabold text-lg shadow-md shadow-primary-500/20 group-hover:scale-105 transition-transform duration-200">
-            D
-          </div>
-          <span className="font-extrabold text-xl tracking-tight text-slate-800 dark:text-slate-100 group-hover:text-primary-600 transition-colors duration-200">
-            Studio<span className="text-primary-500">.</span>
-          </span>
-        </Link>
-
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1 bg-slate-100/80 dark:bg-zinc-900/80 p-1.5 rounded-full border border-slate-200/40 dark:border-zinc-800/40">
-          {navLinks.map((link) => {
-            const isActive = location.pathname === link.path;
-            return (
-              <Link
-                key={link.name}
-                to={link.path}
-                className={`px-5 py-2 text-sm font-semibold rounded-full transition-all duration-200 focus:outline-none ${
-                  isActive
-                    ? 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-slate-100 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-                }`}
+    <header className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${scrolled
+      ? 'bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md border-b border-slate-200/50 dark:border-zinc-800/50 shadow-sm'
+      : 'bg-transparent'
+      }`}>
+      {/* Desktop Card Nav */}
+      <nav
+        ref={navRef}
+        className="hidden lg:block max-w-6xl mx-auto px-3 py-2"
+      >
+        <div className="relative">
+          {/* Top Bar - Logo and CTA */}
+          <div className="flex items-center justify-between mb-4">
+            {/* Left Side - Menu Cards Indicator */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="p-2 rounded-lg bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors"
+                aria-label={isExpanded ? 'Tutup menu' : 'Buka menu'}
               >
-                {navLinks.findIndex(l => l.name === link.name) === 2 && isActive ? (
-                  <span className="flex items-center gap-1.5">
-                    <Icon icon="solar:ticket-bold" className="w-4 h-4 text-primary-500" />
-                    {link.name}
-                  </span>
-                ) : (
-                  link.name
-                )}
-              </Link>
-            );
-          })}
-        </nav>
+                <Icon icon={isExpanded ? "solar:close-circle-bold" : "solar:menu-dots-bold"} className="w-5 h-5" />
+              </button>
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                {isExpanded ? 'Menu' : 'Tampilkan'}
+              </span>
+            </div>
 
-        {/* Desktop Right Side CTA */}
-        <div className="hidden md:flex items-center gap-3">
-          {isAdminLoggedIn ? (
-            <Link to="/admin/dashboard">
-              <Button size="sm" variant="outline" className="flex items-center gap-2">
-                <Icon icon="solar:user-bold" className="w-4 h-4 text-primary-500" />
-                Dashboard Admin
+            {/* Center - Logo */}
+            <Link to="/" className="flex items-center group focus:outline-none">
+              <img
+                src={logoDstudio}
+                alt="D Studio"
+                className="h-20 w-auto object-contain group-hover:scale-105 transition-transform duration-300"
+              />
+            </Link>
+
+            {/* Right Side - CTA Button */}
+            <Link to="/pesanan" className="flex items-center gap-2 group">
+              <Button
+                size="sm"
+                className="shadow-primary-500/20 group-hover:shadow-primary-500/40 transition-shadow"
+              >
+                Pesan Sekarang
+                <Icon icon="solar:arrow-right-up-bold" className="w-3 h-3 ml-1 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
               </Button>
             </Link>
-          ) : (
-            <Link to="/admin/login" className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors mr-2">
-              Admin Login
-            </Link>
-          )}
-          <Link to="/pesanan">
-            <Button size="sm" className="shadow-primary-500/10">
-              Pesan Sekarang
-            </Button>
-          </Link>
-        </div>
+          </div>
 
-        {/* Mobile Hamburger Button */}
+          {/* Expandable Cards */}
+          {isExpanded && (
+            <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              {navItems.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-xl p-4 text-white transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                  style={{ backgroundColor: item.bgColor }}
+                >
+                  <h3 className="font-bold text-sm mb-3 opacity-90">{item.label}</h3>
+                  <div className="flex flex-col gap-2">
+                    {item.links.map((link, linkIdx) => (
+                      <Link
+                        key={linkIdx}
+                        to={link.path}
+                        className="text-xs font-medium py-1.5 px-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-between group"
+                      >
+                        <span>{link.label}</span>
+                        <Icon icon="solar:arrow-right-up-bold" className="w-3 h-3 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </nav>
+
+      {/* Mobile Navigation */}
+      <div className="lg:hidden max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className="flex items-center group focus:outline-none">
+          <img
+            src={logoDstudio}
+            alt="D Studio"
+            className="h-20 w-auto object-contain"
+          />
+        </Link>
+
+        {/* Mobile Menu Button */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="md:hidden flex items-center justify-center p-2 rounded-xl bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-slate-300 focus:outline-none"
-          aria-label="Toggle Menu"
+          className={`p-2 rounded-lg bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-800 transition-all duration-300 ease-in-out transform ${isOpen ? 'scale-105' : ''}`}
+          aria-label={isOpen ? 'Tutup menu' : 'Buka menu'}
         >
-          <Icon icon={isOpen ? "solar:close-circle-bold" : "solar:menu-hamburger-bold"} className="w-5 h-5" />
+          <Icon icon={isOpen ? "solar:close-circle-bold" : "solar:menu-dots-bold"} className="w-5 h-5" />
         </button>
       </div>
 
-      {/* Mobile Drawer Overlay */}
+      {/* Mobile Drawer */}
       {isOpen && (
-        <div className="md:hidden fixed inset-0 top-[60px] z-30 bg-white dark:bg-zinc-950 flex flex-col p-6 animate-fade-in">
-          <nav className="flex flex-col gap-4 mt-6">
-            {navLinks.map((link) => {
-              const isActive = location.pathname === link.path;
-              return (
-                <Link
-                  key={link.name}
-                  to={link.path}
-                  className={`flex items-center gap-3 p-4 text-base font-bold rounded-2xl transition-colors ${
-                    isActive
-                      ? 'bg-primary-50 dark:bg-primary-950/20 text-primary-600 dark:text-primary-400'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900'
-                  }`}
-                >
-                  <Icon icon={
-                    link.name === 'Beranda' ? 'solar:home-smile-angle-bold' :
-                    link.name === 'Layanan' ? 'solar:case-minimalistic-bold' : 'solar:ticket-bold'
-                  } className="w-5 h-5 text-current" />
-                  {link.name}
-                </Link>
-              );
-            })}
+        <div className="lg:hidden fixed inset-x-0 top-[70px] z-30 bg-white dark:bg-zinc-950 flex flex-col p-6 animate-in fade-in duration-300 ease-out transform-gpu shadow-xl shadow-slate-900/10 overflow-y-auto">
+          {/* Mobile Card Menu */}
+          <nav className="flex flex-col gap-3 mb-8">
+            {navItems.map((item, idx) => (
+              <div
+                key={idx}
+                className="rounded-3xl p-4 text-white transition-all duration-300 ease-out shadow-lg shadow-black/10"
+                style={{ backgroundColor: item.bgColor }}
+              >
+                <h3 className="font-bold text-sm mb-3 opacity-90">{item.label}</h3>
+                <div className="flex flex-col gap-2">
+                  {item.links.map((link, linkIdx) => {
+                    const isActive = location.pathname === link.path;
+                    return (
+                      <Link
+                        key={linkIdx}
+                        to={link.path}
+                        className={`text-xs font-medium py-3 px-3 rounded-2xl transition-all duration-300 ease-in-out flex items-center justify-between gap-3 group ${isActive
+                          ? 'bg-white/30 font-bold'
+                          : 'bg-white/10 hover:bg-white/20'
+                          }`}
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-white/90 shadow-sm" />
+                          {link.label}
+                        </span>
+                        <Icon icon="solar:arrow-right-up-bold" className="w-3 h-3 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
-          
-          <div className="mt-auto flex flex-col gap-3 pb-12">
-            <Link to="/pesanan" className="w-full">
-              <Button className="w-full py-3.5">Pesan Sekarang</Button>
+
+          {/* Divider */}
+          <div className="h-px bg-slate-200 dark:bg-zinc-800 my-4" />
+
+          {/* Additional Actions */}
+          <div className="space-y-3">
+            <Link to="/hubungi" className="flex items-center gap-3 p-3 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-900 transition-colors">
+              <Icon icon="solar:phone-bold" className="w-5 h-5" />
+              <span className="font-medium">Hubungi Kami</span>
             </Link>
-            {isAdminLoggedIn ? (
-              <Link to="/admin/dashboard" className="w-full">
-                <Button variant="outline" className="w-full py-3.5 flex justify-center items-center gap-2">
-                  <Icon icon="solar:user-bold" className="w-4 h-4 text-primary-500" />
-                  Dashboard Admin
-                </Button>
-              </Link>
-            ) : (
-              <Link to="/admin/login" className="w-full">
-                <Button variant="ghost" className="w-full py-3.5 text-slate-600">
-                  Login Admin
-                </Button>
-              </Link>
-            )}
+          </div>
+
+          {/* CTA Button */}
+          <div className="mt-auto pt-6">
+            <Link to="/pesanan" className="w-full">
+              <Button className="w-full py-3.5 flex items-center justify-center gap-2">
+                Pesan Sekarang
+                <Icon icon="solar:arrow-right-up-bold" className="w-4 h-4" />
+              </Button>
+            </Link>
           </div>
         </div>
       )}

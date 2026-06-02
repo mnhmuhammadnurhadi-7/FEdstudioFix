@@ -15,6 +15,11 @@ import cpns1 from '../../assets/marquee/kemejaputih1.png';
 import cpns2 from '../../assets/marquee/kemejaputih2.png';
 import cpns3 from '../../assets/marquee/kemejaputih3.png';
 import cpns5 from '../../assets/marquee/kemejaputih5.png';
+import testi1 from '../../assets/marquee/testi1.png';
+import testi2 from '../../assets/marquee/testi2.png';
+import testi3 from '../../assets/marquee/testi3.png';
+import testi4 from '../../assets/marquee/testi4.png';
+import testi5 from '../../assets/marquee/testi5.png';
 
 const PortfolioMarquee = () => {
   const [activeTab, setActiveTab] = useState('ktm'); // 'ktm' | 'cpns' | 'jashitam'
@@ -23,27 +28,35 @@ const PortfolioMarquee = () => {
     { id: 'ktm', label: 'Pas Foto KTM', icon: 'solar:square-academic-cap-bold' },
     { id: 'cpns', label: 'Pas Foto CPNS', icon: 'solar:document-bold' },
     { id: 'jashitam', label: 'Pas Foto Jas Hitam', icon: 'solar:user-bold' },
+    { id: 'testimoni', label: 'Testimoni', icon: 'mdi:star' },
   ];
 
   const portfolioData = {
     ktm: [
       { image: ubee1, label: 'KTM Univ Brawijaya' },
-      { image: ubee3, label: 'KTM Univ Gadjah Mada' },
-      { image: ubee4, label: 'KTM Univ Airlangga' },
-      { image: ubee5, label: 'KTM Univ Indonesia' },
+      { image: ubee3, label: 'KTM Univ Brawijaya' },
+      { image: ubee4, label: 'KTM Univ Brawijaya' },
+      { image: ubee5, label: 'KTM Univ Brawijaya' },
     ],
     cpns: [
-      { image: cpns1, label: 'CPNS Kemenkumham' },
-      { image: cpns2, label: 'CPNS Kementerian Luar Negeri' },
-      { image: cpns3, label: 'CPNS Kementerian Kesehatan' },
-      { image: cpns5, label: 'CPNS Kemendikbud' },
+      { image: cpns1, label: 'Kemeja Putih' },
+      { image: cpns2, label: 'Kemeja Putih' },
+      { image: cpns3, label: 'Kemeja Putih' },
+      { image: cpns5, label: 'Kemeja Putih' },
     ],
     jashitam: [
-      { image: jashitam1, label: 'maba Universitas Brawijaya' },
-      { image: jashitam2, label: 'Pas Foto Lamaran Kerja' },
-      { image: jashitam3, label: 'Pas Foto Resmi' },
+      { image: jashitam1, label: 'Maba UB 2025' },
+      { image: jashitam2, label: 'Jas Hitam' },
+      { image: jashitam3, label: 'Jas Hitam' },
       { image: jashitam4, label: 'Foto Administrasi' },
       { image: jashitam5, label: 'Foto Karyawan' },
+    ],
+    testimoni: [
+      { image: testi1, label: 'Testimoni Pelanggan' },
+      { image: testi2, label: 'Testimoni Pelanggan' },
+      { image: testi3, label: 'Testimoni Pelanggan' },
+      { image: testi4, label: 'Testimoni Pelanggan' },
+      { image: testi5, label: 'Testimoni Pelanggan' },
     ],
   };
 
@@ -52,18 +65,18 @@ const PortfolioMarquee = () => {
   const marqueeItems = [...activeItems, ...activeItems, ...activeItems, ...activeItems];
 
   return (
-    <section className="bg-slate-50 dark:bg-zinc-900/40 py-24 overflow-hidden border-t border-slate-200/50 dark:border-zinc-800/50">
+    <section className="bg-white text-slate-900">
       <div className="max-w-7xl mx-auto px-6 text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-4">
+        <h2 className="text-3xl md:text-4xl font-semibold text-black tracking-tight mb-4">
           Tetap Jadi Diri Sendiri, <br className="sm:hidden" />
           Pesan Pas Foto Anda Sekarang
         </h2>
-        <p className="text-sm text-slate-500 max-w-xl mx-auto mb-8">
+        <p className="text-sm text-gray-500 max-w-xl mx-auto mb-8">
           Hasil editing profesional kami terbukti rapi dan sesuai kebutuhan administrasi instansi terkait.
         </p>
 
         {/* Tab buttons */}
-        <div className="inline-flex flex-wrap justify-center gap-2 p-1.5 bg-slate-200/70 dark:bg-zinc-800/80 rounded-2xl border border-slate-300/30">
+        <div className="inline-flex flex-wrap justify-center gap-2 p-1.5 bg-slate-200/70 dark:bg-zinc-800/80 rounded-full border border-slate-300/30">
           {tabs.map((tab) => {
             const isTabActive = activeTab === tab.id;
             return (
@@ -86,9 +99,6 @@ const PortfolioMarquee = () => {
 
       {/* Sliding Marquee - Strictly consistent image sizes (w-48 h-64 equivalent in tailwind: w-[190px] h-[260px]) */}
       <div className="relative w-full flex items-center justify-center overflow-hidden py-4 select-none">
-        {/* Left and Right Blur Fade Overlays */}
-        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-slate-50 to-transparent dark:from-zinc-950 z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-slate-50 to-transparent dark:from-zinc-950 z-10 pointer-events-none" />
 
         {/* Scrolling Inner Track */}
         <div className="flex gap-6 animate-marquee w-max py-2">
@@ -118,7 +128,9 @@ const PortfolioMarquee = () => {
             Pesan Pas Foto Sekarang
           </Button>
         </Link>
+        <div></div>
       </div>
+      
     </section>
   );
 };

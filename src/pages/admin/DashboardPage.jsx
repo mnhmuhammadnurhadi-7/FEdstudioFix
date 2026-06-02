@@ -6,11 +6,13 @@ import Badge from '../../components/ui/Badge';
 import Toast from '../../components/ui/Toast';
 import { formatDate } from '../../lib/helpers';
 import axiosInstance from '../../lib/axios';
+import { useAuth } from '../../context/AuthContext';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const adminName = localStorage.getItem('admin_name') || 'Administrator';
-  const adminRole = localStorage.getItem('admin_role') || 'ADMIN';
+  const { admin, logout } = useAuth();
+  const adminName = admin?.name || 'Administrator';
+  const adminRole = admin?.role || 'ADMIN';
   
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
@@ -20,6 +22,12 @@ const DashboardPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
+  const [showUrlModal, setShowUrlModal] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
+  const [pendingOrderId, setPendingOrderId] = useState(null);
+  const [pendingTargetStatus, setPendingTargetStatus] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteOrderId, setDeleteOrderId] = useState(null);
 
   // Mock seed data for offline dashboard fallback
   const mockSeedOrders = [
@@ -82,7 +90,26 @@ const DashboardPage = () => {
     setIsLoading(true);
     try {
       const response = await axiosInstance.get('/admin/orders');
-      setOrders(response.data);
+      // Map backend fields to frontend expected format
+      const mappedOrders = response.data.orders.map(order => ({
+        id: order.id_pesanan,
+        ticket_code: order.kode_tiket,
+        customer_name: order.nama_pelanggan,
+        whatsapp_number: order.no_wa || '-',
+        email: order.email || '-',
+        service_name: order.layanan?.nama_layanan || 'Unknown',
+        raw_photo_link: order.link_foto_mentah || '#',
+        finished_photo_link: order.link_foto_hasil || '#',
+        notes: order.catatan || '',
+        total_bayar: order.total_bayar || 0,
+        status: (order.keterangan_status?.toLowerCase() === 'revisi' ? 'REVISI' : order.status_pesanan?.toUpperCase()) || 'PENDING',
+        keterangan_status: order.keterangan_status,
+        admin_name: order.admin?.nama_admin || order.adminUpdatedBy?.nama_admin || '-',
+        rating: order.rating?.nilai_rating || null,
+        ulasan: order.rating?.ulasan || null,
+        created_at: order.created_at,
+      }));
+      setOrders(mappedOrders);
     } catch (error) {
       console.warn('Admin API fetch failed, loading localStorage fallback: ', error.message);
       
@@ -117,7 +144,15 @@ const DashboardPage = () => {
     }
 
     if (statusFilter !== 'ALL') {
-      result = result.filter((o) => o.status === statusFilter);
+      // Map frontend filter to backend status
+      const statusMap = {
+        'PENDING': 'TERKIRIM',
+        'PROSES': 'DIPROSES',
+        'SELESAI': 'SELESAI',
+        'REVISI': 'REVISI',
+        'DIAMBIL': 'SELESAI',
+      };
+      result = result.filter((o) => o.status === statusMap[statusFilter] || o.status === statusFilter);
     }
 
     // Sort: newest first
@@ -126,22 +161,29 @@ const DashboardPage = () => {
     setFilteredOrders(result);
   }, [orders, searchQuery, statusFilter]);
 
-  // Update status (Pending -> Proses -> Selesai)
-  const handleUpdateStatus = async (orderId, currentStatus) => {
-    let nextStatus = 'PROSES';
-    if (currentStatus === 'PENDING') nextStatus = 'PROSES';
-    else if (currentStatus === 'PROSES') nextStatus = 'SELESAI';
-    else return;
+  // Update status (Pending -> Proses -> Selesai/Revisi)
+  const handleUpdateStatus = async (orderId, currentStatus, targetStatus) => {
+    // If target is 'selesai', show URL input modal
+    if (targetStatus === 'selesai') {
+      setPendingOrderId(orderId);
+      setPendingTargetStatus(targetStatus);
+      setUrlInput('');
+      setShowUrlModal(true);
+      return;
+    }
+
+    let nextStatus = targetStatus;
+    let nextFrontendStatus = targetStatus.toUpperCase();
 
     setActionLoadingId(orderId);
 
     try {
       // PATCH /api/admin/orders/${id}/status
       await axiosInstance.patch(`/admin/orders/${orderId}/status`, { status: nextStatus });
-      
+
       setToastMessage({
         type: 'success',
-        text: `Status order #${orderId} sukses diubah ke ${nextStatus}!`,
+        text: `Status order #${orderId} sukses diubah ke ${nextFrontendStatus}!`,
       });
       fetchOrders();
     } catch (error) {
@@ -151,16 +193,16 @@ const DashboardPage = () => {
       const localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
       const index = localOrders.findIndex((o) => o.id === orderId || o.ticket_code === orderId);
       if (index !== -1) {
-        localOrders[index].status = nextStatus;
+        localOrders[index].status = nextFrontendStatus;
         // Seed finished drive url if completed
-        if (nextStatus === 'SELESAI') {
+        if (nextStatus === 'selesai' || nextStatus === 'revisi') {
           localOrders[index].finished_photo_link = 'https://drive.google.com/file/d/finished-demo';
         }
         localStorage.setItem('local_orders', JSON.stringify(localOrders));
-        
+
         setToastMessage({
           type: 'success',
-          text: `Offline update: Status order #${orderId} sukses diubah ke ${nextStatus}!`,
+          text: `Offline update: Status order #${orderId} sukses diubah!`,
         });
         fetchOrders();
       }
@@ -169,30 +211,114 @@ const DashboardPage = () => {
     }
   };
 
+  const handleConfirmUrlSubmit = async () => {
+    if (!urlInput.trim()) {
+      setToastMessage({
+        type: 'error',
+        text: 'URL Drive hasil tidak boleh kosong!',
+      });
+      return;
+    }
+
+    setActionLoadingId(pendingOrderId);
+
+    try {
+      // PATCH /api/admin/orders/${id}/status with finished_photo_link
+      await axiosInstance.patch(`/admin/orders/${pendingOrderId}/status`, {
+        status: pendingTargetStatus,
+        finished_photo_link: urlInput.trim(),
+      });
+
+      setToastMessage({
+        type: 'success',
+        text: `Status order #${pendingOrderId} sukses diubah ke SELESAI!`,
+      });
+      setShowUrlModal(false);
+      setUrlInput('');
+      setPendingOrderId(null);
+      setPendingTargetStatus(null);
+      fetchOrders();
+    } catch (error) {
+      console.warn('API PATCH status failed, running offline update: ', error.message);
+
+      // Local storage update fallback
+      const localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
+      const index = localOrders.findIndex((o) => o.id === pendingOrderId || o.ticket_code === pendingOrderId);
+      if (index !== -1) {
+        localOrders[index].status = 'SELESAI';
+        localOrders[index].finished_photo_link = urlInput.trim();
+        localStorage.setItem('local_orders', JSON.stringify(localOrders));
+
+        setToastMessage({
+          type: 'success',
+          text: `Offline update: Status order #${pendingOrderId} sukses diubah!`,
+        });
+        setShowUrlModal(false);
+        setUrlInput('');
+        setPendingOrderId(null);
+        setPendingTargetStatus(null);
+        fetchOrders();
+      }
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   const handleLogout = () => {
-    localStorage.clear();
-    setToastMessage({
-      type: 'success',
-      text: 'Keluar sistem berhasil.',
-    });
-    setTimeout(() => {
-      navigate('/admin/login');
-      window.location.reload();
-    }, 800);
+    logout();
+  };
+
+  const openDeleteConfirm = (orderId) => {
+    setDeleteOrderId(orderId);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteOrder = async () => {
+    setActionLoadingId(deleteOrderId);
+    try {
+      await axiosInstance.delete(`/admin/orders/${deleteOrderId}`);
+      setToastMessage({
+        type: 'success',
+        text: `Order #${deleteOrderId} berhasil dihapus!`,
+      });
+      setShowDeleteModal(false);
+      setDeleteOrderId(null);
+      fetchOrders();
+    } catch (error) {
+      console.warn('API DELETE order failed, deleting from local storage: ', error.message);
+      
+      const localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
+      const filtered = localOrders.filter((o) => o.id !== deleteOrderId && o.ticket_code !== deleteOrderId);
+      localStorage.setItem('local_orders', JSON.stringify(filtered));
+      
+      setToastMessage({
+        type: 'success',
+        text: `Offline: Order #${deleteOrderId} berhasil dihapus!`,
+      });
+      setShowDeleteModal(false);
+      setDeleteOrderId(null);
+      fetchOrders();
+    } finally {
+      setActionLoadingId(null);
+    }
   };
 
   // Compute metrics dynamically
   const totalCount = orders.length;
-  const pendingCount = orders.filter((o) => o.status === 'PENDING').length;
-  const prosesCount = orders.filter((o) => o.status === 'PROSES').length;
-  const selesaiCount = orders.filter((o) => o.status === 'SELESAI' || o.status === 'DIAMBIL').length;
+  const pendingCount = orders.filter((o) => o.status === 'PENDING' || o.status === 'TERKIRIM').length;
+  const prosesCount = orders.filter((o) => o.status === 'PROSES' || o.status === 'DIPROSES').length;
+  const selesaiCount = orders.filter((o) => o.status === 'SELESAI').length;
+  const revisiCount = orders.filter((o) => o.status === 'REVISI').length;
 
   const getStatusBadgeVariant = (status) => {
-    switch (status?.toUpperCase()) {
-      case 'PENDING': return 'warning';
-      case 'PROSES': return 'info';
+    const statusUpper = status?.toUpperCase();
+    switch (statusUpper) {
+      case 'PENDING':
+      case 'TERKIRIM': return 'warning';
+      case 'PROSES':
+      case 'DIPROSES': return 'info';
       case 'SELESAI': return 'success';
-      case 'DIAMBIL': return 'indigo';
+      case 'REVISI': return 'danger';
       default: return 'neutral';
     }
   };
@@ -216,13 +342,33 @@ const DashboardPage = () => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <Link to="/admin/completed">
+              <Button variant="primary" size="sm" className="flex items-center gap-2">
+                <Icon icon="solar:check-circle-bold" className="text-white" />
+                Pesanan Selesai
+              </Button>
+            </Link>
             {adminRole === 'SUPER_ADMIN' && (
-              <Link to="/admin/services">
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
-                  <Icon icon="solar:suitcase-tag-bold" className="text-primary-500" />
-                  Kelola Layanan (Super Admin)
-                </Button>
-              </Link>
+              <>
+                <Link to="/admin/services">
+                  <Button variant="outline" size="sm" className="flex items-center gap-2">
+                    <Icon icon="solar:suitcase-tag-bold" className="text-primary-500" />
+                    Kelola Layanan
+                  </Button>
+                </Link>
+                <Link to="/admin/admins">
+                  <Button variant="outline" size="sm" className="flex items-center gap-2">
+                    <Icon icon="solar:users-group-rounded-bold" className="text-primary-500" />
+                    Kelola Admin
+                  </Button>
+                </Link>
+                <Link to="/admin/cms">
+                  <Button variant="outline" size="sm" className="flex items-center gap-2">
+                    <Icon icon="solar:document-text-bold" className="text-primary-500" />
+                    Kelola CMS
+                  </Button>
+                </Link>
+              </>
             )}
             <Button variant="danger" size="sm" onClick={handleLogout} className="flex items-center gap-2">
               <Icon icon="solar:logout-bold" />
@@ -283,6 +429,7 @@ const DashboardPage = () => {
               <option value="PENDING">Pending (Antrean)</option>
               <option value="PROSES">Sedang Proses</option>
               <option value="SELESAI">Selesai</option>
+              <option value="REVISI">Revisi</option>
               <option value="DIAMBIL">Sudah Diambil</option>
             </select>
           </div>
@@ -313,15 +460,19 @@ const DashboardPage = () => {
                     <th className="px-6 py-4.5">Customer / Kontak</th>
                     <th className="px-6 py-4.5">Jenis Layanan</th>
                     <th className="px-6 py-4.5">Mentah (GDrive)</th>
+                    <th className="px-6 py-4.5">Admin</th>
+                    <th className="px-6 py-4.5">Rating</th>
                     <th className="px-6 py-4.5">Status</th>
-                    <th className="px-6 py-4.5 text-center">Aksi Cepat</th>
+                    <th className="px-6 py-4.5 text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80 text-xs">
                   {filteredOrders.map((ord) => {
                     const isActionLoading = actionLoadingId === ord.id || actionLoadingId === ord.ticket_code;
-                    const canProses = ord.status === 'PENDING';
-                    const canSelesai = ord.status === 'PROSES';
+                    const canProses = ord.status === 'PENDING' || ord.status === 'TERKIRIM';
+                    const canSelesai = ord.status === 'PROSES' || ord.status === 'DIPROSES';
+                    const canRevisi = ord.status === 'SELESAI' || ord.status === 'REVISI';
+                    const isSelesaiFix = ord.status === 'SELESAI';
                     
                     return (
                       <tr key={ord.id || ord.ticket_code} className="hover:bg-slate-50/40 dark:hover:bg-zinc-850/20 transition-colors">
@@ -364,7 +515,33 @@ const DashboardPage = () => {
                             Buka Drive
                           </a>
                         </td>
-                        
+
+                        {/* Admin */}
+                        <td className="px-6 py-4">
+                          <span className="font-semibold text-slate-600 dark:text-slate-350">
+                            {ord.admin_name || '-'}
+                          </span>
+                        </td>
+
+                        {/* Rating */}
+                        <td className="px-6 py-4">
+                          {ord.rating ? (
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1">
+                                <Icon icon="solar:star-bold" className="w-4 h-4 text-amber-400" />
+                                <span className="font-bold text-slate-800 dark:text-slate-200">{ord.rating}/5</span>
+                              </div>
+                              {ord.ulasan && (
+                                <span className="text-[9px] text-slate-400 truncate max-w-[150px]" title={ord.ulasan}>
+                                  {ord.ulasan}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-[10px]">Belum rating</span>
+                          )}
+                        </td>
+
                         {/* Status Badge */}
                         <td className="px-6 py-4">
                           <Badge variant={getStatusBadgeVariant(ord.status)}>
@@ -376,32 +553,104 @@ const DashboardPage = () => {
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2">
                             {canProses && (
-                              <Button 
-                                size="sm" 
-                                variant="primary" 
-                                className="bg-sky-500 hover:bg-sky-600 text-xs px-3.5 py-1.5 focus:ring-sky-500"
-                                onClick={() => handleUpdateStatus(ord.id || ord.ticket_code, ord.status)}
-                                isLoading={isActionLoading}
-                              >
-                                Proses Foto
-                              </Button>
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  variant="primary" 
+                                  className="bg-sky-500 hover:bg-sky-600 text-xs px-3.5 py-1.5 focus:ring-sky-500"
+                                  onClick={() => handleUpdateStatus(ord.id || ord.ticket_code, ord.status, 'diproses')}
+                                  isLoading={isActionLoading}
+                                >
+                                  Proses Foto
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="danger" 
+                                  className="bg-rose-50 hover:bg-rose-100 hover:text-rose-600 text-rose-500 border border-rose-150/40 text-xs px-2.5 py-1.5 shadow-none"
+                                  onClick={() => openDeleteConfirm(ord.id || ord.ticket_code)}
+                                  isLoading={isActionLoading}
+                                >
+                                  <Icon icon="solar:trash-bin-trash-bold" className="w-4 h-4" />
+                                </Button>
+                              </>
                             )}
                             {canSelesai && (
-                              <Button 
-                                size="sm" 
-                                variant="primary" 
-                                className="bg-emerald-500 hover:bg-emerald-600 text-xs px-3.5 py-1.5 focus:ring-emerald-500"
-                                onClick={() => handleUpdateStatus(ord.id || ord.ticket_code, ord.status)}
-                                isLoading={isActionLoading}
-                              >
-                                Tandai Selesai
-                              </Button>
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  variant="primary" 
+                                  className="bg-emerald-500 hover:bg-emerald-600 text-xs px-3.5 py-1.5 focus:ring-emerald-500"
+                                  onClick={() => handleUpdateStatus(ord.id || ord.ticket_code, ord.status, 'selesai')}
+                                  isLoading={isActionLoading}
+                                >
+                                  Tandai Selesai
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="warning" 
+                                  className="bg-amber-500 hover:bg-amber-600 text-xs px-3.5 py-1.5 focus:ring-amber-500"
+                                  onClick={() => handleUpdateStatus(ord.id || ord.ticket_code, ord.status, 'revisi')}
+                                  isLoading={isActionLoading}
+                                >
+                                  Revisi
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="danger" 
+                                  className="bg-rose-50 hover:bg-rose-100 hover:text-rose-600 text-rose-500 border border-rose-150/40 text-xs px-2.5 py-1.5 shadow-none"
+                                  onClick={() => openDeleteConfirm(ord.id || ord.ticket_code)}
+                                  isLoading={isActionLoading}
+                                >
+                                  <Icon icon="solar:trash-bin-trash-bold" className="w-4 h-4" />
+                                </Button>
+                              </>
                             )}
-                            {!canProses && !canSelesai && (
-                              <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                                <Icon icon="solar:check-circle-bold" className="text-emerald-500" />
-                                Transaksi Selesai
-                              </span>
+                            {canRevisi && (
+                              <>
+                                {isSelesaiFix && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="warning" 
+                                    className="bg-amber-500 hover:bg-amber-600 text-xs px-3.5 py-1.5 focus:ring-amber-500"
+                                    onClick={() => handleUpdateStatus(ord.id || ord.ticket_code, ord.status, 'revisi')}
+                                    isLoading={isActionLoading}
+                                  >
+                                    Revisi
+                                  </Button>
+                                )}
+                                <Button 
+                                  size="sm" 
+                                  variant="primary" 
+                                  className="bg-emerald-500 hover:bg-emerald-600 text-xs px-3.5 py-1.5 focus:ring-emerald-500"
+                                  onClick={() => handleUpdateStatus(ord.id || ord.ticket_code, ord.status, 'selesai')}
+                                  isLoading={isActionLoading}
+                                >
+                                  Tandai Selesai
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="danger" 
+                                  className="bg-rose-50 hover:bg-rose-100 hover:text-rose-600 text-rose-500 border border-rose-150/40 text-xs px-2.5 py-1.5 shadow-none"
+                                  onClick={() => openDeleteConfirm(ord.id || ord.ticket_code)}
+                                  isLoading={isActionLoading}
+                                >
+                                  <Icon icon="solar:trash-bin-trash-bold" className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
+                            {!canProses && !canSelesai && !canRevisi && (
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  variant="danger" 
+                                  className="bg-rose-50 hover:bg-rose-100 hover:text-rose-600 text-rose-500 border border-rose-150/40 text-xs px-2.5 py-1.5 shadow-none"
+                                  onClick={() => openDeleteConfirm(ord.id || ord.ticket_code)}
+                                  isLoading={isActionLoading}
+                                >
+                                  <Icon icon="solar:trash-bin-trash-bold" className="w-4 h-4" />
+                                </Button>
+                                
+                              </>
                             )}
                           </div>
                         </td>
@@ -415,6 +664,85 @@ const DashboardPage = () => {
         </div>
 
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-full max-w-sm shadow-xl text-center flex flex-col items-center">
+            <div className="w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 flex items-center justify-center text-rose-500 mb-4 shadow-sm">
+              <Icon icon="solar:trash-bin-trash-bold" className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">
+              Konfirmasi Hapus Order
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
+              Apakah Anda yakin ingin menghapus order #{deleteOrderId} permanen? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex gap-3 w-full">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteOrderId(null);
+                }}
+                className="flex-1"
+              >
+                Batal
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDeleteOrder}
+                isLoading={actionLoadingId !== null}
+                className="flex-1 shadow-md shadow-rose-500/10"
+              >
+                Hapus
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* URL Input Modal */}
+      {showUrlModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">
+              Masukkan URL Drive Hasil
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+              Silakan masukkan link Google Drive berkas foto hasil edit untuk menyelesaikan pesanan ini.
+            </p>
+            <input
+              type="url"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="https://drive.google.com/file/d/..."
+              className="w-full px-4 py-3 text-sm bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl focus:border-primary-500 focus:outline-none text-slate-800 dark:text-slate-100 mb-4"
+            />
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowUrlModal(false);
+                  setUrlInput('');
+                  setPendingOrderId(null);
+                  setPendingTargetStatus(null);
+                }}
+                className="flex-1"
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleConfirmUrlSubmit}
+                isLoading={actionLoadingId !== null}
+                className="flex-1"
+              >
+                Konfirmasi
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toastMessage && (

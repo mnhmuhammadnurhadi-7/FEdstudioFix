@@ -1,13 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import Button from '../ui/Button';
 import afterImage from '../../assets/homepage/after.jpg';
 import beforeImage from '../../assets/homepage/before.jpg';
+import axiosInstance from '../../lib/axios';
 
 const HeroSection = () => {
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isSliding, setIsSliding] = useState(false);
+  const [heroContent, setHeroContent] = useState({
+    hero_title: 'Edit Pas Foto Online',
+    hero_subtitle: 'Ubah Selfie Jadi Pas Foto Kilat!',
+    about_text: 'Edit foto selfie Anda menjadi pas foto formal profesional untuk KTM, KTP, CPNS, Visa, atau Lamaran Kerja dalam hitungan jam. Hasil berkualitas tinggi, rapi, dan bergaransi resmi.',
+  });
+
+  useEffect(() => {
+    const fetchHeroContent = async () => {
+      try {
+        const response = await axiosInstance.get('/home');
+        setHeroContent(response.data);
+      } catch (error) {
+        console.warn('Failed to fetch hero content:', error.message);
+        // Keep default values if API fails
+      }
+    };
+    fetchHeroContent();
+  }, []);
 
   const handleMove = (clientX, rect) => {
     const x = clientX - rect.left;
@@ -42,11 +61,11 @@ const HeroSection = () => {
             Layanan Pas Foto Formal Tanpa ke Studio
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-slate-100 leading-[1.1] tracking-tight">
-            Edit Pas Foto Online <br className="hidden sm:inline" />
-            Ubah Selfie Jadi <span className="text-primary-500">Pas Foto Kilat!</span>
+            {heroContent.hero_title} <br className="hidden sm:inline" />
+            Ubah Selfie Jadi <span className="text-primary-500">{heroContent.hero_subtitle}</span>
           </h1>
           <p className="text-base sm:text-lg text-slate-500 dark:text-slate-400 max-w-lg leading-relaxed">
-            Edit foto selfie Anda menjadi pas foto formal profesional untuk KTM, KTP, CPNS, Visa, atau Lamaran Kerja dalam hitungan jam. Hasil berkualitas tinggi, rapi, dan bergaransi resmi.
+            {heroContent.about_text}
           </p>
           <div className="flex flex-wrap items-center gap-4 mt-2">
             <Link to="/pesanan">

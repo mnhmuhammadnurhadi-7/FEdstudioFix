@@ -1,30 +1,94 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
-import { formatDate } from '../../lib/helpers';
+import Toast from '../ui/Toast';
+import { formatDate, formatRupiah } from '../../lib/helpers';
+import axiosInstance from '../../lib/axios';
 
-const OrderDetail = ({ order, onDownload }) => {
-  const [rating, setRating] = useState(0);
-  const [rated, setRated] = useState(false);
+const OrderDetail = ({ order, onDownload, onOrderUpdate }) => {
+  const [rating, setRating] = useState(order?.rating || 0);
+  const [rated, setRated] = useState(Boolean(order?.rating));
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  const [reviewText, setReviewText] = useState(order?.ulasan || '');
+  const [toastMessage, setToastMessage] = useState(null);
+
+  useEffect(() => {
+    setRating(order?.rating || 0);
+    setReviewText(order?.ulasan || '');
+    setRated(Boolean(order?.rating));
+  }, [order]);
 
   if (!order) return null;
 
-  const isCompleted = order.status === 'SELESAI' || order.status === 'DIAMBIL';
+  const isCompleted = ['SELESAI', 'REVISI', 'DIAMBIL'].includes(order.status?.toUpperCase());
 
   const getStatusBadgeVariant = (status) => {
     switch (status?.toUpperCase()) {
       case 'PENDING': return 'warning';
       case 'PROSES': return 'info';
-      case 'SELESAI': return 'success';
-      case 'DIAMBIL': return 'indigo';
+      case 'SELESAI':
+      case 'DIAMBIL': return 'success';
+      case 'REVISI': return 'danger';
       default: return 'neutral';
     }
   };
 
-  const handleRating = (stars) => {
-    setRating(stars);
-    setRated(true);
+  const handleRating = async (stars) => {
+    setIsSubmittingRating(true);
+    try {
+      await axiosInstance.post('/order/rate', {
+        kode_tiket: order.ticket_code,
+        nilai_rating: stars,
+        ulasan: reviewText || order.ulasan || '',
+      });
+      const updatedOrder = { ...order, rating: stars, ulasan: reviewText || order.ulasan || '' };
+      setRating(stars);
+      setRated(true);
+      onOrderUpdate?.(updatedOrder);
+    } catch (error) {
+      console.warn('Failed to submit rating:', error.message);
+      const updatedOrder = { ...order, rating: stars, ulasan: reviewText || order.ulasan || '' };
+      setRating(stars);
+      setRated(true);
+      onOrderUpdate?.(updatedOrder);
+    } finally {
+      setIsSubmittingRating(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!rating) {
+      setToastMessage({
+        type: 'error',
+        text: 'Silakan berikan rating terlebih dahulu!',
+      });
+      return;
+    }
+
+    setIsSubmittingRating(true);
+    try {
+      await axiosInstance.post('/order/rate', {
+        kode_tiket: order.ticket_code,
+        nilai_rating: rating,
+        ulasan: reviewText,
+      });
+      const updatedOrder = { ...order, rating, ulasan: reviewText };
+      onOrderUpdate?.(updatedOrder);
+      setRated(true);
+      setToastMessage({
+        type: 'success',
+        text: 'Terima kasih atas ulasan Anda!',
+      });
+    } catch (error) {
+      console.warn('Failed to submit review:', error.message);
+      setToastMessage({
+        type: 'error',
+        text: 'Gagal mengirim ulasan.',
+      });
+    } finally {
+      setIsSubmittingRating(false);
+    }
   };
 
   return (
@@ -76,6 +140,10 @@ const OrderDetail = ({ order, onDownload }) => {
             <div className="flex justify-between py-1 border-b border-slate-50 dark:border-zinc-800/40">
               <span className="font-semibold text-slate-400">Layanan</span>
               <span className="font-bold text-slate-800 dark:text-slate-200">{order.service_name || 'Pas Foto'}</span>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50 dark:border-zinc-800/40">
+              <span className="font-semibold text-slate-400">Total Pembayaran</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">{formatRupiah(order.total_bayar || 0)}</span>
             </div>
             <div className="flex justify-between py-1 border-b border-slate-50 dark:border-zinc-800/40">
               <span className="font-semibold text-slate-400">Estimasi Selesai</span>
@@ -133,22 +201,68 @@ const OrderDetail = ({ order, onDownload }) => {
             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3">
               Bagaimana Hasil Editannya?
             </h4>
-            <div className="flex justify-center items-center gap-2 mb-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  onClick={() => handleRating(star)}
-                  className={`text-2xl transition-transform hover:scale-110 focus:outline-none ${
-                    star <= (rating || 5) ? 'text-amber-400' : 'text-slate-200'
-                  }`}
-                  disabled={rated}
-                >
-                  <Icon icon="solar:star-bold" />
-                </button>
-              ))}
+            <div className="flex flex-col gap-4 items-center mb-3">
+              <div className="flex justify-center items-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => handleRating(star)}
+                    className={`text-2xl transition-transform duration-300 ease-out hover:scale-110 focus:outline-none ${
+                      star <= rating ? 'text-amber-400' : 'text-slate-200'
+                    }`}
+                    disabled={rated || isSubmittingRating}
+                  >
+                    <Icon icon="solar:star-bold" />
+                  </button>
+                ))}
+              </div>
+
+              {(order.rating || rated) ? (
+                <div className="w-full text-left space-y-3">
+                  <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-100">
+                    <span>Rating Anda:</span>
+                    <span className="inline-flex items-center gap-1 text-amber-500">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Icon key={star} icon="solar:star-bold" className={`w-4 h-4 ${star <= rating ? 'text-amber-400' : 'text-slate-200'}`} />
+                      ))}
+                      <span className="text-slate-500 dark:text-slate-400">{rating}/5</span>
+                    </span>
+                  </div>
+                  {reviewText ? (
+                    <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 bg-slate-50 dark:bg-zinc-900 text-slate-700 dark:text-slate-200 text-sm">
+                      <p className="font-semibold mb-2">Ulasan Anda</p>
+                      <p>{reviewText}</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Anda telah memberi rating. Tambahkan ulasan untuk membantu tim kami berkembang.</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="w-full">
+                    <textarea
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      placeholder="Tulis ulasan Anda (opsional)..."
+                      className="w-full px-4 py-3 text-sm bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl focus:border-primary-500 focus:outline-none text-slate-800 dark:text-slate-100 resize-none"
+                      rows={3}
+                      disabled={isSubmittingRating}
+                    />
+                  </div>
+                  {rating > 0 && (
+                    <Button
+                      onClick={handleSubmitReview}
+                      isLoading={isSubmittingRating}
+                      className="w-full"
+                    >
+                      Kirim Ulasan
+                    </Button>
+                  )}
+                </>
+              )}
             </div>
-            <p className="text-[10px] text-slate-400">
-              {rated ? 'Terima kasih atas ulasan Anda! ❤️' : 'Ulasan Anda membantu kami untuk terus berkembang.'}
+            <p className="text-[10px] text-slate-400 mt-2">
+              {isSubmittingRating ? 'Mengirim ulasan...' : rated ? 'Terima kasih atas ulasan Anda! ❤️' : 'Ulasan Anda membantu kami untuk terus berkembang.'}
             </p>
           </div>
         </div>
@@ -179,6 +293,15 @@ const OrderDetail = ({ order, onDownload }) => {
             </Button>
           </a>
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <Toast
+          message={toastMessage.text}
+          type={toastMessage.type}
+          onClose={() => setToastMessage(null)}
+        />
       )}
 
     </div>
