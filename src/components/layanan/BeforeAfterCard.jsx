@@ -1,9 +1,11 @@
 import React, { useState, useRef } from 'react';
+import useImageProtection from '../../hooks/useImageProtection';
 
 const BeforeAfterCard = ({ beforeImage, afterImage, label }) => {
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef(null);
+  useImageProtection(containerRef);
 
   const handleSliderMove = (e) => {
     if (!isDragging) return;
@@ -26,13 +28,15 @@ const BeforeAfterCard = ({ beforeImage, afterImage, label }) => {
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        data-protected-image
       >
         {/* After Image (Background) */}
         <img
           src={afterImage}
           alt="After"
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover protected-image"
           draggable="false"
+          onContextMenu={(e) => e.preventDefault()}
         />
 
         {/* Before Image (Foreground with clip) */}
@@ -43,9 +47,10 @@ const BeforeAfterCard = ({ beforeImage, afterImage, label }) => {
           <img
             src={beforeImage}
             alt="Before"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover protected-image"
             style={{ width: containerRef.current?.width || '100%' }}
             draggable="false"
+            onContextMenu={(e) => e.preventDefault()}
           />
         </div>
 

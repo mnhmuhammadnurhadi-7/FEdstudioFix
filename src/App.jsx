@@ -19,6 +19,7 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsConditionsPage from './pages/TermsConditionsPage';
 import ProtectedRoute from './components/admin/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import { setupGlobalImageProtection } from './utils/imageProtection';
 
 // Scroll to top on route navigation
 const ScrollToTop = () => {
@@ -44,6 +45,11 @@ const LayoutWrapper = ({ children }) => {
 };
 
 function App() {
+  useEffect(() => {
+    // Initialize global image protection on app load
+    setupGlobalImageProtection();
+  }, []);
+
   return (
     <AuthProvider>
       <Router>

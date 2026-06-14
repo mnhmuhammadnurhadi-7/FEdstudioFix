@@ -132,10 +132,13 @@ const PortfolioMarquee = () => {
               key={index} 
               className="flex-shrink-0 w-[225px] h-[487px] bg-white dark:bg-zinc-800 rounded-[32px] overflow-hidden shadow-2xl border border-slate-200/40 dark:border-zinc-700/50 hover:-translate-y-1 transition-transform duration-300 relative group"
             >
-              <img 
+              <img
                 src={item.image}
                 alt={item.label}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover protected-image"
+                draggable="false"
+                onContextMenu={(e) => e.preventDefault()}
+                data-protected-image
               />
 
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 text-left">

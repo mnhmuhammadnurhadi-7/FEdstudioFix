@@ -31,8 +31,10 @@ const BeforeAfterSlider = ({ services, onServiceChange }) => {
                 <img
                   src={service.sampleBefore}
                   alt={`Sebelum ${service.name}`}
-                  className="h-full w-full object-cover grayscale brightness-95"
+                  className="h-full w-full object-cover grayscale brightness-95 protected-image"
                   draggable="false"
+                  onContextMenu={(e) => e.preventDefault()}
+                  data-protected-image
                 />
                 <div className="absolute bottom-3 left-3 rounded-full bg-black/70 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white">
                   Sebelum
@@ -42,8 +44,10 @@ const BeforeAfterSlider = ({ services, onServiceChange }) => {
                 <img
                   src={service.sampleAfter}
                   alt={`Sesudah ${service.name}`}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-cover protected-image"
                   draggable="false"
+                  onContextMenu={(e) => e.preventDefault()}
+                  data-protected-image
                 />
                 <div className="absolute bottom-3 left-3 rounded-full bg-primary-500/90 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white">
                   Setelah
