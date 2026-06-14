@@ -62,7 +62,7 @@ const BerandaPage = () => {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#FAFAFC]">
+    <div className="flex flex-col min-h-screen bg-white">
 
       {/* 1. Hero Section */}
       <HeroSection />

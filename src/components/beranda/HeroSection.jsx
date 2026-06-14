@@ -121,7 +121,7 @@ const HeroSection = () => {
                 <img 
                   src={beforeImage} 
                   alt="Sebelum diedit" 
-                  className="w-full h-full object-cover grayscale brightness-95"
+                  className="w-full h-full object-cover "
                   draggable="false"
                 />
                 <div className="absolute bottom-6 left-6 px-3.5 py-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-xs font-bold text-white tracking-wide uppercase">

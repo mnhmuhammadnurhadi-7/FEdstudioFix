@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { Icon } from '@iconify/react';
+import React, { useState, useRef, useEffect } from 'react';
 import Button from '../ui/Button';
 import { Link } from 'react-router-dom';
 import jashitam1 from '../../assets/marquee/jashitam1.png';
@@ -23,13 +22,31 @@ import testi5 from '../../assets/marquee/testi5.png';
 
 const PortfolioMarquee = () => {
   const [activeTab, setActiveTab] = useState('ktm'); // 'ktm' | 'cpns' | 'jashitam'
+  const [sliderStyle, setSliderStyle] = useState({ left: 0, width: 0 });
+  const tabRefs = useRef({});
 
   const tabs = [
-    { id: 'ktm', label: 'Pas Foto KTM', icon: 'solar:square-academic-cap-bold' },
-    { id: 'cpns', label: 'Pas Foto CPNS', icon: 'solar:document-bold' },
-    { id: 'jashitam', label: 'Pas Foto Jas Hitam', icon: 'solar:user-bold' },
-    { id: 'testimoni', label: 'Testimoni', icon: 'mdi:star' },
+    { id: 'ktm', label: 'Pas Foto KTM', shortLabel: 'KTM' },
+    { id: 'cpns', label: 'Pas Foto CPNS', shortLabel: 'CPNS' },
+    { id: 'jashitam', label: 'Pas Foto Jas Hitam', shortLabel: 'Jas Hitam' },
+    { id: 'testimoni', label: 'Testimoni', shortLabel: 'Testimoni' },
   ];
+
+  useEffect(() => {
+    const updateSlider = () => {
+      const activeTabElement = tabRefs.current[activeTab];
+      if (activeTabElement) {
+        setSliderStyle({
+          left: activeTabElement.offsetLeft,
+          width: activeTabElement.offsetWidth,
+        });
+      }
+    };
+
+    updateSlider();
+    window.addEventListener('resize', updateSlider);
+    return () => window.removeEventListener('resize', updateSlider);
+  }, [activeTab]);
 
   const portfolioData = {
     ktm: [
@@ -76,21 +93,29 @@ const PortfolioMarquee = () => {
         </p>
 
         {/* Tab buttons */}
-        <div className="inline-flex flex-wrap justify-center gap-2 p-1.5 bg-slate-200/70 dark:bg-zinc-800/80 rounded-full border border-slate-300/30">
+        <div className="relative inline-flex items-center bg-slate-100 p-1 rounded-full border border-slate-200/60 max-w-full overflow-hidden">
+          {/* Sliding active background */}
+          <div
+            className="absolute top-1 bottom-1 bg-white rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)] border border-slate-200/50 transition-all duration-300 ease-out"
+            style={{
+              left: `${sliderStyle.left}px`,
+              width: `${sliderStyle.width}px`,
+            }}
+          />
+
           {tabs.map((tab) => {
             const isTabActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
+                ref={(el) => (tabRefs.current[tab.id] = el)}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition-all duration-200 focus:outline-none ${
-                  isTabActive
-                    ? 'bg-white dark:bg-zinc-700 text-primary-600 dark:text-slate-100 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                className={`relative z-10 flex items-center justify-center px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-full transition-colors duration-300 focus:outline-none select-none ${
+                  isTabActive ? 'text-black' : 'text-slate-400 hover:text-slate-600'
                 }`}
               >
-                <Icon icon={tab.icon} className="w-4 h-4" />
-                {tab.label}
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.shortLabel}</span>
               </button>
             );
           })}

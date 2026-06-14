@@ -214,7 +214,7 @@ const PesananPage = () => {
       console.warn('API POST failed, running offline fallback mode: ', error.message);
       const generatedTicket = generateTicketCode(formData.whatsapp);
       setTicketCode(generatedTicket);
-      
+
       const currentOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
       const selectedService = services.find(s => s.id === formData.service_id);
       currentOrders.push({
@@ -256,7 +256,7 @@ const PesananPage = () => {
   const selectedService = services.find((s) => String(s.id) === String(formData.service_id)) || fallbackServices.find((s) => String(s.id) === String(formData.service_id));
 
   return (
-    <div className="min-h-screen bg-[#FAFAFC]">
+    <div className="min-h-screen bg-white">
       {/* Page Hero */}
       <PageHero
         badge="Buat Pesanan"

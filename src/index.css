@@ -48,6 +48,15 @@
   ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
   }
+    .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .scrollbar-none {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
 }
 
 /* Custom continuous marquee speed controls if needed */
