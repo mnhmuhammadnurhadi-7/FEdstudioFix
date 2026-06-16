@@ -8,7 +8,7 @@ const axiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // Enable cookies for session-based auth
+  withCredentials: false, // Disabled to prevent CORS issues on separate domains
 });
 
 // Response Interceptor: Redirect to login on 401 unauthorized status
