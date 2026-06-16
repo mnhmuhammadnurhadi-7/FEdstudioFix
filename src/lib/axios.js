@@ -8,16 +8,7 @@ const axiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: false, // Disabled to prevent CORS issues on separate domains
-});
-
-// Request Interceptor: Attach token if exists
-axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem('admin_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+  withCredentials: true, // MUST be true for Laravel Session Cookies to work
 });
 
 // Response Interceptor: Redirect to login on 401 unauthorized status
