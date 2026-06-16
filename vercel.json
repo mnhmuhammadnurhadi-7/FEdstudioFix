@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/:match*",
+      "destination": "https://p01--d-dstudio--8g42pqltxsyb.code.run/api/:match*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
