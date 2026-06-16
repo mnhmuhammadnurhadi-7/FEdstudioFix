@@ -88,7 +88,8 @@ const CrudAdminPage = () => {
 
     // Map frontend fields to backend API format
     const payload = {
-      nama_admin: formData.name,
+      name: formData.name,         // Backend createAdmin expects 'name'
+      nama_admin: formData.name,   // Backend updateAdmin expects 'nama_admin'
       username: formData.username,
       role: formData.role,
     };
@@ -161,7 +162,7 @@ const CrudAdminPage = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 pt-24 pb-16">
       <div className="max-w-7xl mx-auto px-6">
-        
+
         {/* Navigation and Title Banner */}
         <div className="bg-white dark:bg-zinc-900 border border-slate-200/50 dark:border-zinc-800/50 rounded-[32px] p-6 md:p-8 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8">
           <div>
@@ -219,20 +220,20 @@ const CrudAdminPage = () => {
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <Button 
+                          <Button
                             onClick={() => openEditModal(admin)}
-                            variant="outline" 
-                            size="sm" 
+                            variant="outline"
+                            size="sm"
                             className="text-xs"
                             disabled={admin.id === parseInt(currentAdminId)}
                           >
                             <Icon icon="solar:pen-bold" className="w-4 h-4 mr-1.5" />
                             Ubah
                           </Button>
-                          <Button 
+                          <Button
                             onClick={() => openDeleteConfirm(admin.id)}
-                            variant="danger" 
-                            size="sm" 
+                            variant="danger"
+                            size="sm"
                             className="text-xs bg-rose-50 hover:bg-rose-100 hover:text-rose-600 text-rose-500 border border-rose-150/40 shadow-none"
                             disabled={admin.id === parseInt(currentAdminId)}
                           >
@@ -255,11 +256,11 @@ const CrudAdminPage = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop overlay */}
-          <div 
+          <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
             onClick={() => setIsModalOpen(false)}
           />
-          
+
           {/* Modal Container */}
           <div className="relative bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 rounded-[32px] p-6 md:p-8 max-w-lg w-full shadow-2xl animate-scale-up z-10 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-zinc-800 pb-3 mb-5">
@@ -304,15 +305,15 @@ const CrudAdminPage = () => {
               />
 
               <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-zinc-800">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setIsModalOpen(false)}
                   disabled={isLoading}
                 >
                   Batal
                 </Button>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   isLoading={isLoading}
                   className="shadow-md"
                 >
@@ -327,12 +328,12 @@ const CrudAdminPage = () => {
       {/* CONFIRM DELETE MODAL */}
       {isDeleteOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
+          <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
             onClick={() => setIsDeleteOpen(false)}
           />
           <div className="relative bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 rounded-[32px] p-6 max-w-sm w-full shadow-2xl animate-scale-up z-10 text-center flex flex-col items-center">
-            
+
             <div className="w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 flex items-center justify-center text-rose-500 mb-4 shadow-sm">
               <Icon icon="solar:trash-bin-trash-bold" className="w-6 h-6" />
             </div>
@@ -345,15 +346,15 @@ const CrudAdminPage = () => {
             </p>
 
             <div className="flex justify-center gap-2.5 w-full">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setIsDeleteOpen(false)}
                 disabled={isLoading}
                 className="flex-1"
               >
                 Batal
               </Button>
-              <Button 
+              <Button
                 variant="danger"
                 onClick={handleDeleteAdmin}
                 isLoading={isLoading}
