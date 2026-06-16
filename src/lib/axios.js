@@ -11,6 +11,15 @@ const axiosInstance = axios.create({
   withCredentials: false, // Disabled to prevent CORS issues on separate domains
 });
 
+// Request Interceptor: Attach token if exists
+axiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem('admin_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Response Interceptor: Redirect to login on 401 unauthorized status
 axiosInstance.interceptors.response.use(
   (response) => response,
